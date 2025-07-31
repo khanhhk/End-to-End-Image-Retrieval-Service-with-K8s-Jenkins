@@ -17,15 +17,39 @@
 * Cloud platform: [![GCP][GCP-logo]][GCP-url]
 ## Project Structure
 ```txt
+  ├── ansible                               
+  │    ├── playbook
+  |    |    ├── create_compute_instance.yaml
+  |    |    └── install_and_run_docker.yml
+  │    ├── inventory                   
+  │    └── requirements.txt
   ├── embedding                               
   │    ├── Dockerfile                    
   │    ├── main.py                      
   │    └── requirements.txt
+  ├── gifs
   ├── helm_charts                 
   │    ├── embedding
+  |    |    ├── templates
+  |    |    |    ├── deployment.yaml
+  |    |    |    └── service.yaml
+  |    |    ├── Chart.yaml
+  |    |    └── values.yaml
   │    ├── ingesting
+  |    |    ├── templates
+  |    |    |    ├── deployment.yaml
+  |    |    |    ├── nginx-ingress.yaml
+  |    |    |    └── service.yaml
+  |    |    ├── Chart.yaml
+  |    |    └── values.yaml
   │    ├── nginx-ingress
   │    └── retriever
+  |    |    ├── templates
+  |    |    |    ├── deployment.yaml
+  |    |    |    ├── nginx-ingress.yaml
+  |    |    |    └── service.yaml
+  |    |    ├── Chart.yaml
+  |    |    └── values.yaml
   ├── images                            
   ├── ingesting                              
   │    ├── .env                       
@@ -39,10 +63,11 @@
   │    ├── Dockerfile                  
   │    ├── main.py                     
   │    └── requirements.txt                         
-  ├──  terraform
+  ├── terraform
   │    ├── main.tf
   │    └── variables.tf
-  └──  Dockerfile-jenkins           
+  ├── Dockerfile-jenkins
+  └── Jenkinsfile         
 ```
 # Table of contents
 
