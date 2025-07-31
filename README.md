@@ -318,6 +318,9 @@ Chọn Settings --> Webhooks
 
 ![](gifs/4-4.gif)
 
+When the build is complete, you will see the following:
+![](images/4-7.png)
+
 <!-- MARKDOWN LINKS & IMAGES -->
 [Github-logo]: https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white
 [Github-url]: https://github.com/
