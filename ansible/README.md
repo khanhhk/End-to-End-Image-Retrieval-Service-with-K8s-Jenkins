@@ -24,7 +24,7 @@ After creating, please replace mine at `secrets/*.json`
     ```
 
 #### 4.2. Install Docker and run the application
-After your instance has been started as the folowing image, get the External IP (e.g., `34.87.38.122` as in the example) and replace it in the inventory file
+After your instance has been started as the folowing image, get the External IP (e.g., `34.143.151.153` as in the example) and replace it in the inventory file
 
 ![Compute Engine](./imgs/compute_engine.png)
 , and run the following commands:
@@ -33,9 +33,9 @@ After your instance has been started as the folowing image, get the External IP 
     cd playbook
     ansible-playbook -i ../inventory install_and_run_docker.yml
     ```
-, now, you should be able to access your application via `http://34.87.38.122:8081/docs`
+, now, you should be able to access your application via `http://34.143.151.153:8081/docs`
 
-ssh -i ~/.ssh/id_rsa YOUR_USERNAME@34.87.38.122
+ssh -i ~/.ssh/id_rsa YOUR_USERNAME@34.143.151.153
 
 sudo docker ps
 
