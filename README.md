@@ -62,15 +62,13 @@
 
 4. [Continuous deployment to GKE using Jenkins pipeline](#4-continuous-deployment-to-gke-using-jenkins-pipeline)
 
-    1. [Create Google Compute Engine](#41-spin-up-your-instance)
+    1. [Spin up your instance](#41-spin-up-your-instance)
 
     2. [Install Docker and Jenkins in GCE](#42-install-docker-and-jenkins)
 
-    3. [Connect to Jenkins UI in GCE](#43-connect-to-jenkins-ui-in-compute-engine)
+    3. [Connect to Jenkins UI in Compute Engine](#43-connect-to-jenkins-ui-in-compute-engine)
 
     4. [Setup Jenkins](#44-setup-jenkins)
-
-    5. [Continuous deployment](#45-continuous-deployment)
 
 ## 1. Create GKE Cluster
 ### How-to Guide
@@ -226,7 +224,7 @@ rate(container_cpu_usage_seconds_total{container='app', namespace='model-serving
 
 ## 4. Continuous deployment to GKE using Jenkins pipeline
 
-Jenkins is deployed on Google Compute Engine using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) with a machine type is **n1-standard-2**.
+Jenkins is deployed on Google Compute Engine using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) with a machine type is **e2-standard-2**.
 
 ### 4.1. Spin up your instance
 Create new key as json type for your [service account](https://console.cloud.google.com/) and save it in `ansible/secrets` directory. Update your `project` and `service_account_file` in `ansible/playbook/create_compute_instance.yaml`.
