@@ -1,0 +1,42 @@
+replicaCount: 2
+
+ingress:
+  enabled: true
+  host: 35.240.244.49.sslip.io
+      
+image:
+  repository: hoangkimkhanh1907/retriever-service
+  tag: 0.0.8
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  name: retriever-service
+  httpPort:
+    enable: true
+    port: 80
+    targetPort: 5002
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+
+env:
+  - name: PINECONE_APIKEY
+    valueFrom:
+      secretKeyRef:
+        name: retriever-secrets
+        key: PINECONE_APIKEY
+  - name: GOOGLE_APPLICATION_CREDENTIALS
+    value: /secrets/gcp-key.json
+  - name: EMBEDDING_SERVICE_URL
+    value: http://embedding-service.embedding.svc.cluster.local:80/embed
+
+secretMount:
+  name: gcp-key-secret
+  mountPath: /secrets/gcp-key.json
+  subPath: gcp-key.json
