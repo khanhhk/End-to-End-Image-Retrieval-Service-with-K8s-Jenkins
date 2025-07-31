@@ -46,12 +46,16 @@
 ```
 # Table of contents
 
-1. [Create GKE Cluster](#1-create-gke-clusterCreate-GKE-Cluster)
+1. [Create GKE Cluster](#1-create-gke-cluster)
 2. [Deploy serving service manually](#2-deploy-serving-service-manually)
 
     1. [Deploy nginx ingress controller](#21-deploy-nginx-ingress-controller)
 
-    2. [Deploy application](#22-deploy-application-to-gke-cluster-manually)
+    2. [Deploy the Embedding Model](#22-deploy-the-embedding-model)
+
+    3. [Deploy the Ingesting](#22-deploy-the-ingesting)
+
+    4. [Deploy the Retriever](#22-deploy-the-retriever)
 
 3. [Deploy monitoring service](#3-deploy-monitoring-service)
 
@@ -71,7 +75,6 @@
     4. [Setup Jenkins](#44-setup-jenkins)
 
 ## 1. Create GKE Cluster
-### How-to Guide
 
 #### 1.1. Create [Project](https://console.cloud.google.com/projectcreate) in Google Cloud Platform (GCP)
 #### 1.2. Install gcloud CLI 
@@ -83,9 +86,7 @@ sudo apt-get install google-cloud-cli-gke-gcloud-auth-plugin
 ```
 
 #### 1.4. Using [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create GKE cluster.
-Update your [project id](https://console.cloud.google.com/projectcreate) in `terraform/variables.tf`
-Run the following commands to create GKE cluster:
-
+Update <your_project_id> in `terraform/variables.tf`. Run the following commands to create GKE cluster:
 ```bash
 cd terraform
 terraform init
@@ -97,23 +98,18 @@ terraform apply
 
 It can takes about 10 minutes for create successfully a GKE cluster. You can see that on [GKE UI](https://console.cloud.google.com/kubernetes/list)
 
-![](images/gke_ui.png)
 #### 1.5. Connect to the GKE cluster.
 + Go back to the [GKE UI](https://console.cloud.google.com/kubernetes/list).
-+ Click on vertical ellipsis icon and select **Connect**.
-You will see the popup Connect to the cluster as follows
-![](images/connect_gke.png)
++ Click on your cluster and select **Connect**.
 + Copy the line `gcloud container clusters get-credentials ...` into your local terminal.
 
 After run this command, the GKE cluster can be connected from local.
 ```bash
-kubectx gke_image-retrieval-project-mlops_asia-southeast1_image-retrieval-project-mlops-gke
+kubectx
 ```
-
+![](gifs/1-1.gif)
 ## 2. Deploy serving service manually
 Using [Helm chart](https://helm.sh/docs/topics/charts/) to deploy application on GKE cluster.
-
-### How-to Guide
 
 #### 2.1. Deploy nginx ingress controller
 ```bash
@@ -122,43 +118,52 @@ helm upgrade --install nginx-ingress ./helm_charts/nginx-ingress --namespace ngi
 After that, nginx ingress controller will be created in `nginx-ingress` namespace.
 + Check if the nginx-ingress controller pods are running successfully:
 ```bash
-kubectl get pods --namespace nginx-ingress
+kubectl get pods -n nginx-system
 ```
 + Ensure that the required services are created by Helm for the nginx-ingress controller:
 ```bash
-kubectl get svc --namespace nginx-ingress
+kubectl get svc -n nginx-system
 ```
-![](images/check_nginx.png)
-#### 2.2. Deploy application to GKE cluster manually
-Image retrieval service will be deployed with `NodePort` type (nginx ingress will route the request to this service) and 2 replica pods that maintain by `Deployment`.
-
-Each pod contains the container running the image retrieval application.
-
-The requests will initially arrive at the Nginx Ingress Gateway and will subsequently be routed to the service within the `model-serving` namespace of the GKE cluster.
-
+![](images/2-1.png)
+#### 2.2. Deploy the Embedding Model
+Tôi sử dụng mô hình embedding là [ViT-MSN][https://github.com/facebookresearch/msn], có thể import thông qua [Hugging Face][https://huggingface.co/facebook/vit-msn-base]. Run the following bash command to deploy it on Kubernetes:
 ```bash
-cd helm_charts/app
-kubectl create ns model-serving
-kubens model-serving
-helm upgrade --install app --set image.repository=duong05102002/text-image-retrieval-serving --set image.tag=v1.5 .
+helm upgrade --install embedding-service ./helm_charts/embedding --namespace embedding --create-namespace
 ```
-
-After that, application will be deployed successfully on GKE cluster. To test the api, you can do the following steps:
-
-+ Obtain the IP address of nginx-ingress.
+After executing this command, several pods for the embedding model will be created in the ```embedding``` namespace
+#### 2.3. Deploy the Ingesting
+Before running the Helm install command, you must edit the host of the ingress in ./helm_charts/ingesting/values.yaml, to use the external-ip of the NGINX service mentioned above and append nip.io to expose the IP publicly. For example, in my case:
 ```bash
-kubectl get ing
+ingress:
+  enabled: true
+  host: 35.240.244.49.nip.io
 ```
-
-+ Add the domain name `retrieval.com` (set up in `helm_charts/app/templates/app_ingress.yaml`) of this IP to `/etc/hosts`
+To deploy the ingesting, run the following bash command:
 ```bash
-sudo nano /etc/hosts
-[YOUR_INGRESS_IP_ADDRESS] retrieval.com
+kubectl create namespace ingesting
+kubectl create secret generic ingesting-secrets --from-literal=PINECONE_APIKEY=<your_pinecone_apikey> --namespace ingesting
+kubectl create secret generic gcp-key-secret --from-file=gcp-key.json=<path_to_the_file_json> --namespace ingesting
+helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace ingesting
 ```
-or you can utilize my Ingress IP address (valid until 27/11/2023 during the free trial period).
+After executing this command, several pods for the ingesting will be created in the ```ingesting``` namespace
+Now you can access ingesting at address: http://35.240.244.49.nip.io/ingesting/docs
+![](images/2-2.png)
+#### 2.4. Deploy the Retriever
+Similar to the Ingesting, you need to edit the host of the ingress in ./helm_charts/retriever/values.yaml, using the external-ip of the NGINX service mentioned earlier and appending sslip.io to expose the IP publicly. For example, in my case:
 ```bash
-34.133.25.217 retrieval.com
+ingress:
+  enabled: true
+  host: 35.240.244.49.sslip.io
 ```
+Then, run the following bash command to deploy it on Kubernetes:
+```bash
+kubectl create namespace retriever
+kubectl create secret generic retriever-secrets --from-literal=PINECONE_APIKEY=<your_pinecone_apikey> --namespace retriever
+kubectl create secret generic gcp-key-secret --from-file=gcp-key.json=<path_to_the_file_json> --namespace retriever
+helm upgrade --install retriever-service ./helm_charts/retriever --namespace retriever
+```
+Now you can access retriever at address: http://35.240.244.49.sslip.io/retriever/docs
+![](images/2-3.png)
 
 ## 3. Deploy monitoring service
 I'm using Prometheus and Grafana for monitoring the health of both Node and pods that running application.
@@ -223,7 +228,6 @@ rate(container_cpu_usage_seconds_total{container='app', namespace='model-serving
 
 
 ## 4. Continuous deployment to GKE using Jenkins pipeline
-
 Jenkins is deployed on Google Compute Engine using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html) with a machine type is **e2-standard-2**.
 
 ### 4.1. Spin up your instance
