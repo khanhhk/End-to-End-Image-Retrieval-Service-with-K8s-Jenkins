@@ -99,6 +99,12 @@
 
     4. [Setup Jenkins](#44-setup-jenkins)
 
+5. [Demo][#5-demo]
+
+    1. [Demo ingest data][#51-demo-ingest-data]
+
+    2. [Demo retriever][#52-demo-retriever]
+
 ## 1. Create GKE Cluster
 
 #### 1.1. Create [Project](https://console.cloud.google.com/projectcreate) in Google Cloud Platform (GCP)
@@ -349,6 +355,13 @@ Chọn Settings --> Webhooks
 
 When the build is complete, you will see the following:
 ![](images/4-7.png)
+
+## 5. Demo
+### 5.1 Demo ingest data
+![](gifs/5-1.gif)
+
+### 5.2 Demo retriever
+![](gifs/5-2.gif)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [Github-logo]: https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white
