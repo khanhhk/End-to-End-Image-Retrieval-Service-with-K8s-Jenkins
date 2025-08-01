@@ -99,24 +99,24 @@
 
     4. [Setup Jenkins](#44-setup-jenkins)
 
-5. [Demo][#5-demo]
+5. [Demo](#5-demo)
 
-    1. [Demo ingest data][#51-demo-ingest-data]
+    1. [Demo ingest data](#51-demo-ingest-data)
 
-    2. [Demo retriever][#52-demo-retriever]
+    2. [Demo retriever](#52-demo-retriever)
 
 ## 1. Create GKE Cluster
 
-#### 1.1. Create [Project](https://console.cloud.google.com/projectcreate) in Google Cloud Platform (GCP)
-#### 1.2. Install gcloud CLI 
+### 1.1. Create [Project](https://console.cloud.google.com/projectcreate) in Google Cloud Platform (GCP)
+### 1.2. Install gcloud CLI 
 Gcloud CLI can be installed following this document https://cloud.google.com/sdk/docs/install#deb
 
-#### 1.3. Install gke-cloud-auth-plugin
+### 1.3. Install gke-cloud-auth-plugin
 ```bash
 sudo apt-get install google-cloud-cli-gke-gcloud-auth-plugin
 ```
 
-#### 1.4. Using [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create GKE cluster.
+### 1.4. Using [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) to create GKE cluster.
 Update <your_project_id> in `terraform/variables.tf`. Run the following commands to create GKE cluster:
 ```bash
 cd terraform
@@ -129,7 +129,7 @@ terraform apply
 
 It can takes about 10 minutes for create successfully a GKE cluster. You can see that on [GKE UI](https://console.cloud.google.com/kubernetes/list)
 
-#### 1.5. Connect to the GKE cluster.
+### 1.5. Connect to the GKE cluster.
 + Go back to the [GKE UI](https://console.cloud.google.com/kubernetes/list).
 + Click on your cluster and select **Connect**.
 + Copy the line `gcloud container clusters get-credentials ...` into your local terminal.
@@ -142,7 +142,7 @@ kubectx
 ## 2. Deploy serving service manually
 Using [Helm chart](https://helm.sh/docs/topics/charts/) to deploy application on GKE cluster.
 
-#### 2.1. Deploy nginx ingress controller
+### 2.1. Deploy nginx ingress controller
 ```bash
 helm upgrade --install nginx-ingress ./helm_charts/nginx-ingress --namespace nginx-system --create-namespace
 ```
@@ -156,13 +156,13 @@ kubectl get pods -n nginx-system
 kubectl get svc -n nginx-system
 ```
 ![](images/2-1.png)
-#### 2.2. Deploy the Embedding Model
+### 2.2. Deploy the Embedding Model
 Tôi sử dụng mô hình embedding là [ViT-MSN][https://github.com/facebookresearch/msn], có thể import thông qua [Hugging Face][https://huggingface.co/facebook/vit-msn-base]. Run the following bash command to deploy it on Kubernetes:
 ```bash
 helm upgrade --install embedding-service ./helm_charts/embedding --namespace embedding --create-namespace
 ```
 After executing this command, several pods for the embedding model will be created in the ```embedding``` namespace
-#### 2.3. Deploy the Ingesting
+### 2.3. Deploy the Ingesting
 Before running the Helm install command, you must edit the host of the ingress in ./helm_charts/ingesting/values.yaml, to use the external-ip of the NGINX service mentioned above and append nip.io to expose the IP publicly. For example, in my case:
 ```bash
 ingress:
@@ -179,7 +179,7 @@ helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace ing
 After executing this command, several pods for the ingesting will be created in the ```ingesting``` namespace
 Now you can access ingesting at address: http://35.240.244.49.nip.io/ingesting/docs
 ![](images/2-2.png)
-#### 2.4. Deploy the Retriever
+### 2.4. Deploy the Retriever
 Similar to the Ingesting, you need to edit the host of the ingress in ./helm_charts/retriever/values.yaml, using the external-ip of the NGINX service mentioned earlier and appending sslip.io to expose the IP publicly. For example, in my case:
 ```bash
 ingress:
@@ -201,9 +201,7 @@ I'm using Prometheus and Grafana for monitoring the health of both Node and pods
 
 Prometheus will scrape metrics from both Node and pods in GKE cluster. Subsequently, Grafana will display information such as CPU and RAM usage for system health monitoring, and system health alerts will be sent to Discord.
 
-### How-to Guide
-
-#### 3.1. Deploy Prometheus service
+### 3.1. Deploy Prometheus service
 
 + Create Prometheus CRDs
 ```bash
@@ -229,7 +227,7 @@ Prometheus UI can be accessed by `[YOUR_NODEIP_ADDRESS]:30001`
 + I'm using ephemeral IP addresses for the node, and these addresses will automatically change after a 24-hour period. You can change to static IP address for more stability or permanence.
 
 
-#### 3.2. Deploy Grafana service
+### 3.2. Deploy Grafana service
 + Deploy Grafana service (with `NodePort` type) to GKE cluster
 
 ```bash
@@ -357,10 +355,13 @@ When the build is complete, you will see the following:
 ![](images/4-7.png)
 
 ## 5. Demo
+
 ### 5.1 Demo ingest data
+
 ![](gifs/5-1.gif)
 
 ### 5.2 Demo retriever
+
 ![](gifs/5-2.gif)
 
 <!-- MARKDOWN LINKS & IMAGES -->
