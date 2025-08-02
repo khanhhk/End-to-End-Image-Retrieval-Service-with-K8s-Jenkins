@@ -197,11 +197,48 @@ Now you can access retriever at address: http://35.240.244.49.sslip.io/retriever
 ![](images/2-3.png)
 
 ## 3. Deploy monitoring service
+### 3.1 Local
+#### 3.1.1 Elastic Search
+```bash
+cd local/elk
+docker compose -f elk-docker-compose.yml -f extensions/filebeat/filebeat-compose.yml up -d
+```
+You can access kibana at port 5601 to search logs, which FileBeat pulls logs from containers and pushes to ElasticSearch. Username and password of Kibana can be found at ```local/elk/.env```
+
+![](gifs/3-1.gif)
+
+#### 3.1.2 Prometheus + Grafana + Jaeger for monitoring resources and apps
+```bash
+cd local
+docker compose -f prom-graf-docker-compose.yaml up -d
+python monitoring_docker/instrument/metrics/metrics.py
+python monitoring_docker/instrument/traces/trace_automatic.py
+```
+Then, you can access Prometheus at port 9090, Grafana at 3001 and Jaeger at 16686. Username and password of Grafana is admin.
+
+##### 3.1.2.1 Prometheus
+In Prometheus UI, you can search any metrics what you want to monitor and click on the button that i highlighted border to list all metrics prometheus scraping
+
+##### 3.1.2.2 Grafana
+When you access to Grafana, you can create your own dashboard to monitoring or use a template on Grafana Labs
+
+This is a dashboard for cadvisor that i pull from Grafana Labs, you can monitoring CPU Usage of each container as well as Memory Usage, Memory cached, etc ... All information was queried from Prometheus.
+
+Besides, you can monitor node's resource usage and application on your own as i did below.
+
+Throughout monitoring resources, you can set alerting rule for Alert-Manager to warning whenever resources usage is exceed some predefined alerting rule. Alerting rule and webhook you can define in alertmanager/config.yml. In my repo, whenever avalable memory of node is smaller than 5% and cpu usage of jenkins container is greater than 2%, Alert-Manager will send warning to my discord.
+
+##### 3.1.2.3 Jaeger
+Last but not least, sometimes you need to trace some block code processing time, Jaeger will help you do that.
+
+In Jaeger UI, all block code that you want to trace time will be displayed on right hand sides.
+
+### 3.2 Deploy on GKE
 I'm using Prometheus and Grafana for monitoring the health of both Node and pods that running application.
 
 Prometheus will scrape metrics from both Node and pods in GKE cluster. Subsequently, Grafana will display information such as CPU and RAM usage for system health monitoring, and system health alerts will be sent to Discord.
 
-### 3.1. Deploy Prometheus service
+#### 3.2.1 Deploy Prometheus service
 
 + Create Prometheus CRDs
 ```bash
@@ -227,7 +264,7 @@ Prometheus UI can be accessed by `[YOUR_NODEIP_ADDRESS]:30001`
 + I'm using ephemeral IP addresses for the node, and these addresses will automatically change after a 24-hour period. You can change to static IP address for more stability or permanence.
 
 
-### 3.2. Deploy Grafana service
+#### 3.2.2 Deploy Grafana service
 + Deploy Grafana service (with `NodePort` type) to GKE cluster
 
 ```bash

@@ -1,40 +1,69 @@
 pipeline {
     agent any
 
-    environment{
-        registry = 'hoangkimkhanh1907/ingesting-service'
+    environment {
+        registry_base = 'hoangkimkhanh1907'
         registryCredential = 'dockerhub'
-        imageTag = "0.0.11.$BUILD_NUMBER"
+        imageVersion = "0.0.12.${BUILD_NUMBER}"
     }
 
     stages {
-        stage('Build and Push') {
-            steps {
-                script {
-                    echo 'Building image for deployment..'
-                    def dockerImage = docker.build("${registry}:${imageTag}", "-f ./ingesting/Dockerfile ./ingesting")
-                    echo 'Pushing image to dockerhub..'
-                    docker.withRegistry( '', registryCredential ) {
-                        dockerImage.push()
+        stage('Build and Push Images') {
+            parallel {
+                stage('Build Embedding') {
+                    steps {
+                        script {
+                            def imageName = "${registry_base}/embedding-service"
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./embedding/Dockerfile ./embedding")
+                            docker.withRegistry('', registryCredential) {
+                                dockerImage.push()
+                            }
+                        }
+                    }
+                }
+                stage('Build Ingesting') {
+                    steps {
+                        script {
+                            def imageName = "${registry_base}/ingesting-service"
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./ingesting/Dockerfile ./ingesting")
+                            docker.withRegistry('', registryCredential) {
+                                dockerImage.push()
+                            }
+                        }
+                    }
+                }
+                stage('Build Retriever') {
+                    steps {
+                        script {
+                            def imageName = "${registry_base}/retriever-service"
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./retriever/Dockerfile ./retriever")
+                            docker.withRegistry('', registryCredential) {
+                                dockerImage.push()
+                            }
+                        }
                     }
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Services') {
             agent {
                 kubernetes {
                     containerTemplate {
-                        name 'helm' // Name of the container to be used for helm upgrade
-                        image 'hoangkimkhanh1907/jenkins-k8s:0.0.1' // The image containing helm
-                        alwaysPullImage true // Always pull image in case of using the same tag
+                        name 'helm'
+                        image 'hoangkimkhanh1907/jenkins-k8s:0.0.1'
+                        alwaysPullImage true
                     }
                 }
             }
             steps {
                 script {
                     container('helm') {
-                        sh("helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace ingesting --set deployment.image.name=${registry} --set deployment.image.version=${imageTag}")
+                        def services = ['embedding', 'ingesting', 'retriever']
+                        for (svc in services) {
+                            def imageName = "${registry_base}/${svc}-service"
+                            sh "helm upgrade --install ${svc}-service ./helm_charts/${svc} --namespace ${svc} --create-namespace --set deployment.image.name=${imageName} --set deployment.image.version=${imageVersion}"
+                        }
                     }
                 }
             }
