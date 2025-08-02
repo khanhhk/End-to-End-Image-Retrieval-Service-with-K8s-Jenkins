@@ -7,8 +7,8 @@ from loguru import logger
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 from google.cloud import pubsub_v1
-from config import Config
-from utils import get_index, get_storage_client, get_feature_vector
+from ingesting.config import Config
+from ingesting.utils import get_index, get_storage_client, get_feature_vector
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")

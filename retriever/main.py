@@ -5,8 +5,8 @@ from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from loguru import logger
-from config import Config
-from utils import get_index, search, get_storage_client, get_feature_vector
+from retriever.config import Config
+from retriever.utils import get_index, search, get_storage_client, get_feature_vector
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")

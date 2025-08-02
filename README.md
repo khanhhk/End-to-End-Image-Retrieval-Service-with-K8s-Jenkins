@@ -207,12 +207,29 @@ You can access kibana at port 5601 to search logs, which FileBeat pulls logs fro
 
 ![](gifs/3-1.gif)
 
-#### 3.1.2 Prometheus + Grafana + Jaeger for monitoring resources and apps
+#### 3.1.2 Jaeger 
 ```bash
 cd local
 docker compose -f prom-graf-docker-compose.yaml up -d
-python monitoring_docker/instrument/metrics/metrics.py
-python monitoring_docker/instrument/traces/trace_automatic.py
+```
+automatic
+```bash
+opentelemetry-instrument uvicorn embedding_trace_automatic:app
+```
+![](gifs/3-2.gif)
+manual
+```bash
+uvicorn embedding_trace_manual:app
+```
+![](gifs/3-3.gif)
+
+#### 3.1.2 Prometheus + Grafana
+```bash
+cd local
+docker compose -f prom-graf-docker-compose.yaml up -d
+python instrument/metrics/metrics.py
+opentelemetry-instrument uvicorn trace_automatic:app
+uvicorn trace_manual:app
 ```
 Then, you can access Prometheus at port 9090, Grafana at 3001 and Jaeger at 16686. Username and password of Grafana is admin.
 

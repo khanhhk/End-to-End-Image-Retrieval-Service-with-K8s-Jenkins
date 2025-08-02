@@ -5,7 +5,7 @@ from loguru import logger
 from fastapi import HTTPException
 from google.cloud import storage
 from google.oauth2 import service_account
-from config import Config
+from retriever.config import Config
 
 PINECONE_APIKEY = os.environ["PINECONE_APIKEY"]
 
