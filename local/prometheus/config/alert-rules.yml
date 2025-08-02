@@ -1,0 +1,29 @@
+groups:
+- name: System alerts
+  rules:
+  - alert: NodeOutOfMemory
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 5
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: Node out of memory
+      description: "Node memory has reached {{ humanize $value}}%"
+
+  - alert: EmbeddingVectorSizeInvalid
+    expr: embedding_vector_size != 768
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: Embedding vector size mismatch
+      description: "Embedding vector has size {{ $value }} (expected: 768)"
+
+  - alert: EmbeddingMemoryHigh
+    expr: process_resident_memory_bytes > 1.5e+09  # ~1.5GB
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: High memory usage in embedding service
+      description: "Embedding process is using {{ humanize $value }} of RAM"

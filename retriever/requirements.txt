@@ -1,0 +1,7 @@
+fastapi==0.100.0
+loguru==0.7.0
+uvicorn==0.29.0
+pinecone==5.4.0
+google-cloud-storage==2.18.2
+python-multipart==0.0.9
+pillow==10.4.0

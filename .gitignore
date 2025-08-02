@@ -1,0 +1,14 @@
+**/__pycache__
+
+ansible/secrets/*
+
+**/.tmp/*
+
+terraform/*
+!terraform/main.tf 
+!terraform/variables.tf
+!terraform/README.md
+
+**/.env
+
+**/.pytest_cache
