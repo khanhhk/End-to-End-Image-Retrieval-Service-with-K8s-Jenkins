@@ -266,7 +266,7 @@ Create new key as json type for your [service account](https://console.cloud.goo
 
 Go back to your terminal, please execute the following commands to create the Compute Engine instance:
 ```bash
-cd ansible/play-book
+cd ansible/playbook
 ansible-playbook create_compute_instance.yaml
 ```
 

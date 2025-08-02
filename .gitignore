@@ -10,3 +10,5 @@ terraform/*
 !terraform/README.md
 
 **/.env
+
+**/.pytest_cache
