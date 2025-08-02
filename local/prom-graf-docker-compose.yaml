@@ -47,6 +47,58 @@ services:
     networks:
       - monitoring
 
+  embedding-metrics:
+    build: 
+      context: instrument
+      dockerfile: metrics/Dockerfile-embedding
+    container_name: embedding-metrics
+    restart: unless-stopped
+    ports:
+      - 8000:8000
+      - 8099:8099
+    networks:
+      - monitoring
+  
+  ingesting-metrics:
+    build: 
+      context: instrument
+      dockerfile: metrics/Dockerfile-ingesting
+    container_name: ingesting-metrics
+    restart: unless-stopped
+    ports:
+      - 7999:7999
+      - 8098:8098
+    depends_on:
+      - embedding-metrics
+    env_file:
+      - ./instrument/metrics/.env
+    environment:
+      EMBEDDING_SERVICE_URL: http://embedding-metrics:8000/embed
+    volumes:
+      - /home/khanhhk/MLOPS/MLEK3/project_m1/image-retrieval-project-mlops-f9986ebe9e54.json:/secrets/gcp-key.json:ro
+    networks:
+      - monitoring
+  
+  retriever-metrics:
+    build: 
+      context: instrument
+      dockerfile: metrics/Dockerfile-retriever
+    container_name: retriever-metrics
+    restart: unless-stopped
+    ports:
+      - 7998:7998
+      - 8097:8097
+    depends_on:
+      - embedding-metrics
+    env_file:
+      - ./instrument/metrics/.env
+    environment:
+      EMBEDDING_SERVICE_URL: http://embedding-metrics:8000/embed
+    volumes:
+      - /home/khanhhk/MLOPS/MLEK3/project_m1/image-retrieval-project-mlops-f9986ebe9e54.json:/secrets/gcp-key.json:ro
+    networks:
+      - monitoring
+
   alertmanager:
     image: prom/alertmanager:v0.25.0
     container_name: alertmanager

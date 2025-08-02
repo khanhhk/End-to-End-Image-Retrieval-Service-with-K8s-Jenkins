@@ -8,15 +8,22 @@ groups:
       severity: warning
     annotations:
       summary: Node out of memory
-      description: Node memory has reached {{ humanize $value}}%
+      description: "Node memory has reached {{ humanize $value}}%"
 
-- name: Containers
-  rules:
-  - alert: OCRHighMemory
-    expr: sum(rate(container_cpu_usage_seconds_total{name="demo-metrics"}[5m]))*100 > 100
-    for: 30s # Send out noti if the condition is true for more than 30 seconds
+  - alert: EmbeddingVectorSizeInvalid
+    expr: embedding_vector_size != 768
+    for: 10s
+    labels:
+      severity: critical
+    annotations:
+      summary: Embedding vector size mismatch
+      description: "Embedding vector has size {{ $value }} (expected: 768)"
+
+  - alert: EmbeddingMemoryHigh
+    expr: process_resident_memory_bytes > 1.5e+09  # ~1.5GB
+    for: 30s
     labels:
       severity: warning
     annotations:
-      summary: OCR high cpu usage
-      description: OCR cpu consumption is at {{ humanize $value}}%
+      summary: High memory usage in embedding service
+      description: "Embedding process is using {{ humanize $value }} of RAM"

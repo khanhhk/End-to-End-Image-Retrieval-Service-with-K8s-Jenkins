@@ -207,48 +207,49 @@ You can access kibana at port 5601 to search logs, which FileBeat pulls logs fro
 
 ![](gifs/3-1.gif)
 
-#### 3.1.2 Jaeger 
+#### 3.1.2 Jaeger
+Sometimes you need to trace some block code processing time, Jaeger will help you do that.
 ```bash
 cd local
 docker compose -f prom-graf-docker-compose.yaml up -d
 ```
-automatic
+You can access Jaeger at 16686.
++ automatic
 ```bash
+cd instrument/traces
 opentelemetry-instrument uvicorn embedding_trace_automatic:app
 ```
 ![](gifs/3-2.gif)
-manual
+
+In Jaeger UI, all block code that you want to trace time will be displayed on right hand sides.
+
++ manual
 ```bash
+cd instrument/traces
 uvicorn embedding_trace_manual:app
 ```
 ![](gifs/3-3.gif)
 
-#### 3.1.2 Prometheus + Grafana
-```bash
-cd local
-docker compose -f prom-graf-docker-compose.yaml up -d
-python instrument/metrics/metrics.py
-opentelemetry-instrument uvicorn trace_automatic:app
-uvicorn trace_manual:app
-```
-Then, you can access Prometheus at port 9090, Grafana at 3001 and Jaeger at 16686. Username and password of Grafana is admin.
+#### 3.1.3 Prometheus
+You can access Prometheus at port 9090. In Prometheus UI, you can search any metrics what you want to monitor and click on the button that i highlighted border to list all metrics prometheus scraping.
+![](gifs/3-4.gif)
+#### 3.1.4 Grafana
+You can access  Grafana at 3001. Username and password of Grafana is admin. 
 
-##### 3.1.2.1 Prometheus
-In Prometheus UI, you can search any metrics what you want to monitor and click on the button that i highlighted border to list all metrics prometheus scraping
-
-##### 3.1.2.2 Grafana
 When you access to Grafana, you can create your own dashboard to monitoring or use a template on Grafana Labs
+
+...
 
 This is a dashboard for cadvisor that i pull from Grafana Labs, you can monitoring CPU Usage of each container as well as Memory Usage, Memory cached, etc ... All information was queried from Prometheus.
 
 Besides, you can monitor node's resource usage and application on your own as i did below.
 
+... 
+
 Throughout monitoring resources, you can set alerting rule for Alert-Manager to warning whenever resources usage is exceed some predefined alerting rule. Alerting rule and webhook you can define in alertmanager/config.yml. In my repo, whenever avalable memory of node is smaller than 5% and cpu usage of jenkins container is greater than 2%, Alert-Manager will send warning to my discord.
 
-##### 3.1.2.3 Jaeger
-Last but not least, sometimes you need to trace some block code processing time, Jaeger will help you do that.
-
-In Jaeger UI, all block code that you want to trace time will be displayed on right hand sides.
+#### 3.1.5 Alertmanager
+...
 
 ### 3.2 Deploy on GKE
 I'm using Prometheus and Grafana for monitoring the health of both Node and pods that running application.

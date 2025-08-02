@@ -29,7 +29,17 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'otel-ocr-metrics'
+  - job_name: 'embedding-metrics'
     scrape_interval: 10s
     static_configs:
-      - targets: ['demo-metrics:8099']
+      - targets: ['embedding-metrics:8099']
+  
+  - job_name: 'ingesting-metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['ingesting-metrics:8098']
+  
+  - job_name: 'retriever-metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['retriever-metrics:8097']
