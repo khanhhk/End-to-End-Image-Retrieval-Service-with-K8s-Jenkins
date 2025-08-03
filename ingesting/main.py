@@ -1,19 +1,18 @@
-import uuid
 import datetime
 import json
+import uuid
+from io import BytesIO
+
 import uvicorn
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from loguru import logger
 from PIL import Image, UnidentifiedImageError
-from io import BytesIO
-from google.cloud import pubsub_v1
+
 from ingesting.config import Config
-from ingesting.utils import get_index, get_storage_client, get_feature_vector
+from ingesting.utils import get_feature_vector, get_index, get_storage_client
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")
-
-publisher = pubsub_v1.PublisherClient()
 
 GCS_BUCKET_NAME = Config.GCS_BUCKET_NAME
 try:
@@ -21,7 +20,9 @@ try:
     bucket = storage_client.get_bucket(GCS_BUCKET_NAME)
     if not bucket.exists():
         logger.error(f"Bucket {GCS_BUCKET_NAME} not found in Google Cloud Storage.")
-        raise HTTPException(status_code=404, detail=f"Bucket {GCS_BUCKET_NAME} not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Bucket {GCS_BUCKET_NAME} not found."
+        )
 
     logger.info(f"Connected to GCS bucket '{GCS_BUCKET_NAME}' successfully")
 except Exception as e:
@@ -31,16 +32,19 @@ except Exception as e:
 app = FastAPI(
     title="Ingesting Service",
     docs_url="/ingesting/docs",
-    openapi_url="/ingesting/openapi.json"
+    openapi_url="/ingesting/openapi.json",
 )
+
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Image Ingestion API. Visit /docs to test."}
 
-@app.get("/health_check")
+
+@app.get("/healthz")
 def health_check():
     return {"status": "healthy"}
+
 
 @app.post("/push_image")
 async def push_image(file: UploadFile = File(...)):
@@ -49,18 +53,22 @@ async def push_image(file: UploadFile = File(...)):
         # Check file extension
         ext = file.filename.split(".")[-1].lower()
         if ext not in {"jpg", "jpeg", "png"}:
-            raise HTTPException(status_code=400, detail="Only .jpg/.jpeg/.png files are allowed.")
+            raise HTTPException(
+                status_code=400, detail="Only .jpg/.jpeg/.png files are allowed."
+            )
         # Validate image
         try:
             Image.open(BytesIO(image_bytes)).convert("RGB")
         except UnidentifiedImageError:
-            raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
+            raise HTTPException(
+                status_code=400, detail="Uploaded file is not a valid image."
+            )
         # Get feature vector from embedding service
         feature = get_feature_vector(image_bytes)
-        
+
         file_id = str(uuid.uuid4())
         gcs_path = f"images/{file_id}.{ext}"
-        
+
         # 1. Upload to GCS
         blob = bucket.blob(gcs_path)
         if not blob.exists():
@@ -69,7 +77,9 @@ async def push_image(file: UploadFile = File(...)):
                 logger.info(f"Uploaded image to GCS successfully: {gcs_path}")
             except Exception as e:
                 logger.error(f"Failed to upload image to GCS: {e}")
-                raise HTTPException(status_code=500, detail=f"Failed to upload image to GCS: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to upload image to GCS: {e}"
+                )
         else:
             logger.warning(f"Image already exists: {gcs_path}")
 
@@ -83,31 +93,21 @@ async def push_image(file: UploadFile = File(...)):
         )
 
         # 3. Upsert to Pinecone
-        index.upsert([(
-            file_id, 
-            feature, 
-            {"gcs_path": gcs_path, "filename": file.filename})])
+        index.upsert(
+            [(file_id, feature, {"gcs_path": gcs_path, "filename": file.filename})]
+        )
         logger.info(f"Inserted vector into Pinecone: {file_id}")
 
-        # 4. Notify Pub/Sub
-        message = {
-            "id": file_id, 
-            "bucket": Config.GCS_BUCKET_NAME, 
-            "path": gcs_path,
-            "timestamp": datetime.datetime.utcnow().isoformat()
-    }
-        publisher.publish(Config.PUBSUB_TOPIC, json.dumps(message).encode("utf-8"))
-        logger.info(f"Published message to Pub/Sub topic {Config.PUBSUB_TOPIC}: {message}")
-
         return {
-            "message": "Successfully!", 
-            "file_id": file_id, 
-            "gcs_path": gcs_path, 
-            "signed_url": signed_url
-            }
+            "message": "Successfully!",
+            "file_id": file_id,
+            "gcs_path": gcs_path,
+            "signed_url": signed_url,
+        }
     except Exception as e:
         logger.error(f"Error in pushing image: {e}")
         raise HTTPException(status_code=500, detail=f"Error in pushing image: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=5001)

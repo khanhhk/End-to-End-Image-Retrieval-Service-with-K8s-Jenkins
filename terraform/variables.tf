@@ -21,9 +21,3 @@ variable "bucket" {
   type        = string
   default     = "image-retrieval-bucket-1907"
 }
-
-variable "pubsub_topic" {
-  description = "Pub/Sub topic name"
-  type        = string
-  default     = "image-retrieval-topic"
-}

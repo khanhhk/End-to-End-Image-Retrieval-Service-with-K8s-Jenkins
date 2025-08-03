@@ -17,6 +17,7 @@ pipeline {
                             def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./embedding/Dockerfile ./embedding")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
+                                dockerImage.push('latest')
                             }
                         }
                     }
@@ -28,6 +29,7 @@ pipeline {
                             def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./ingesting/Dockerfile ./ingesting")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
+                                dockerImage.push('latest')
                             }
                         }
                     }
@@ -39,6 +41,7 @@ pipeline {
                             def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./retriever/Dockerfile ./retriever")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
+                                dockerImage.push('latest')
                             }
                         }
                     }
@@ -62,7 +65,7 @@ pipeline {
                         def services = ['embedding', 'ingesting', 'retriever']
                         for (svc in services) {
                             def imageName = "${registry_base}/${svc}-service"
-                            sh "helm upgrade --install ${svc}-service ./helm_charts/${svc} --namespace ${svc} --create-namespace --set deployment.image.name=${imageName} --set deployment.image.version=${imageVersion}"
+                            sh "helm upgrade --install ${svc}-service ./helm_charts/${svc} --namespace ${svc} --set deployment.image.name=${imageName} --set deployment.image.version=${imageVersion}"
                         }
                     }
                 }

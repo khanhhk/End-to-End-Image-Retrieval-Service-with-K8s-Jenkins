@@ -1,22 +1,25 @@
 # Read more about OpenTelemetry here:
 # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/fastapi/fastapi.html
-import sys
 import os
+import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
-from retriever.utils import get_index, get_storage_client, get_feature_vector, search
-from retriever.config import Config
 import atexit
 import datetime
 import time
-from loguru import logger
 from io import BytesIO
-from PIL import Image, UnidentifiedImageError
-from fastapi import UploadFile, File, HTTPException, FastAPI
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from loguru import logger
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import get_tracer_provider, set_tracer_provider, Link
+from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
+from PIL import Image, UnidentifiedImageError
+from retriever.config import Config
+from retriever.utils import (get_feature_vector, get_index, get_storage_client,
+                             search)
 
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: "retriever-service"}))
@@ -47,21 +50,30 @@ except Exception as e:
 
 app = FastAPI()
 
+
 @app.post("/search_image")
 async def search_image(file: UploadFile = File(...)):
     with tracer.start_as_current_span("search_image") as main_span:
 
-        with tracer.start_as_current_span("validate-image", links=[Link(main_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "validate-image", links=[Link(main_span.get_span_context())]
+        ):
             image_bytes = await file.read()
             try:
                 Image.open(BytesIO(image_bytes)).convert("RGB")
             except UnidentifiedImageError:
-                raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
+                raise HTTPException(
+                    status_code=400, detail="Uploaded file is not a valid image."
+                )
 
-        with tracer.start_as_current_span("get-feature-vector", links=[Link(main_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "get-feature-vector", links=[Link(main_span.get_span_context())]
+        ):
             feature = get_feature_vector(image_bytes)
 
-        with tracer.start_as_current_span("pinecone-search", links=[Link(main_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "pinecone-search", links=[Link(main_span.get_span_context())]
+        ):
             start_time = time.time()
             match_ids = search(index, feature, top_k=Config.TOP_K)
             elapsed = time.time() - start_time
@@ -69,11 +81,15 @@ async def search_image(file: UploadFile = File(...)):
             if not match_ids:
                 return []
 
-        with tracer.start_as_current_span("fetch-from-pinecone", links=[Link(main_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "fetch-from-pinecone", links=[Link(main_span.get_span_context())]
+        ):
             response = index.fetch(ids=match_ids)
 
         images_url = []
-        with tracer.start_as_current_span("generate-signed-urls", links=[Link(main_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "generate-signed-urls", links=[Link(main_span.get_span_context())]
+        ):
             for match_id in match_ids:
                 if len(images_url) == Config.TOP_K:
                     break
@@ -87,7 +103,7 @@ async def search_image(file: UploadFile = File(...)):
                     signed_url = blob.generate_signed_url(
                         version="v4",
                         expiration=datetime.timedelta(hours=1),
-                        method="GET"
+                        method="GET",
                     )
                     images_url.append(signed_url)
                 else:

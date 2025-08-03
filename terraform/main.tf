@@ -42,14 +42,3 @@ resource "google_storage_bucket" "my-bucket" {
   force_destroy = true
   uniform_bucket_level_access = true
 }
-
-resource "google_pubsub_topic" "mlops_topic" {
-  name   = var.pubsub_topic
-}
-
-resource "google_pubsub_subscription" "mlops_subscription" {
-  name  = "${var.pubsub_topic}-sub"
-  topic = google_pubsub_topic.mlops_topic.id
-  ack_deadline_seconds = 20
-  depends_on = [google_pubsub_topic.mlops_topic]
-}

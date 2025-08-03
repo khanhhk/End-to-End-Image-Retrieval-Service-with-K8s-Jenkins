@@ -35,14 +35,14 @@ spec:
               memory: {{ .Values.resources.requests.memory }}
           livenessProbe:
             httpGet:
-              path: /health_check
+              path: /healthz
               port: {{ .Values.service.httpPort.targetPort }}
               scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 5
           readinessProbe:
             httpGet:
-              path: /health_check
+              path: /healthz
               port: {{ .Values.service.httpPort.targetPort }}
             initialDelaySeconds: 5
             periodSeconds: 3

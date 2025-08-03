@@ -1,7 +1,8 @@
 # Read more about OpenTelemetry here:
 # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/fastapi/fastapi.html
-import sys
 import os
+import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from embedding.main import app
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter

@@ -10,7 +10,6 @@
 * K8s's package manager: [![Helm][Helm-logo]][Helm-url]
 * Data Storage for images: [![Google Cloud Storage][Google-Cloud-Storage-logo]][Google-Cloud-Storage-url]
 * Data Storage for vector embeddings: [![Pinecone][Pinecone-logo]][Pinecone-url]
-* Event trigger: [![Cloud Pub/Sub][Cloud-Pub-Sub-logo]][Cloud-Pub-Sub-url]
 * Ingress controller: [![Nginx][Nginx-logo]][Nginx-url]
 * Observable tools: [![Prometheus][Prometheus-logo]][Prometheus-url] [![Elasticsearch][Elasticsearch-logo]][Elasticsearch-url] [![Grafana][Grafana-logo]][Grafana-url] [![Jaeger][Jaeger-logo]][Jaeger-url] [![Kibana][Kibana-logo]][Kibana-url]
 * Deliver infrastructure as code: [![Ansible][Ansible-logo]][Ansible-url] [![Terraform][Terraform-logo]][Terraform-url]
@@ -449,9 +448,6 @@ After a successful build, you should see something like:
 
 [Pinecone-logo]: https://img.shields.io/badge/Pinecone-4A90E2?logo=pinecone&logoColor=white
 [Pinecone-url]: https://www.pinecone.io
-
-[Cloud-Pub-Sub-logo]: https://img.shields.io/badge/Cloud_Pub/Sub-4285F4?logo=google-cloud&logoColor=white
-[Cloud-Pub-Sub-url]: https://cloud.google.com/pubsub
 
 [Google-Cloud-Functions-logo]: https://img.shields.io/badge/Google_Cloud_Functions-4285F4?logo=google-cloud&logoColor=white
 [Google-Cloud-Functions-url]: https://cloud.google.com/functions

@@ -1,4 +1,4 @@
-fastapi==0.100.0
+fastapi==0.116.1
 loguru==0.7.0
 uvicorn==0.29.0
 pinecone==5.4.0
