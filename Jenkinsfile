@@ -9,12 +9,15 @@ pipeline {
 
     stages {
         stage('Run Tests') {
+            agent {
+                docker {
+                    image 'python:3.9'
+                }
+            }
             steps {
                 script {
-                    // Tạo virtualenv nếu muốn cô lập môi trường
                     sh '''
-                        python3 -m venv venv
-                        . venv/bin/activate
+                        python --version
                         pip install --upgrade pip
                         pip install -r requirements.txt
                         pytest tests/ --maxfail=1 --disable-warnings -q
@@ -22,7 +25,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build and Push Images') {
             parallel {
                 stage('Build Embedding') {
