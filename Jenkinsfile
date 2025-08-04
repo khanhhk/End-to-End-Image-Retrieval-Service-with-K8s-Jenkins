@@ -34,7 +34,7 @@ pipeline {
                     steps {
                         script {
                             def imageName = "${registry_base}/embedding-service"
-                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./embedding/Dockerfile ./embedding")
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./embedding/Dockerfile .")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
                                 dockerImage.push('latest')
@@ -46,7 +46,7 @@ pipeline {
                     steps {
                         script {
                             def imageName = "${registry_base}/ingesting-service"
-                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./ingesting/Dockerfile ./ingesting")
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./ingesting/Dockerfile .")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
                                 dockerImage.push('latest')
@@ -58,7 +58,7 @@ pipeline {
                     steps {
                         script {
                             def imageName = "${registry_base}/retriever-service"
-                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./retriever/Dockerfile ./retriever")
+                            def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./retriever/Dockerfile .")
                             docker.withRegistry('', registryCredential) {
                                 dockerImage.push()
                                 dockerImage.push('latest')
