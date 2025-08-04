@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: hoangkimkhanh1907/embedding-service
-  tag: 0.0.2
+  tag: 0.0.14
   pullPolicy: IfNotPresent
 
 service:
@@ -15,8 +15,8 @@ service:
 
 resources:
   limits:
-    cpu: "1000m"
-    memory: "2Gi"
-  requests:
     cpu: "500m"
     memory: "1Gi"
+  requests:
+    cpu: "250m"
+    memory: "512Mi"

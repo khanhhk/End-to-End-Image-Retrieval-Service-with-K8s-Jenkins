@@ -6,7 +6,7 @@ ingress:
 
 image:
   repository: hoangkimkhanh1907/ingesting-service
-  tag: 0.0.11
+  tag: 0.0.14
   pullPolicy: IfNotPresent
 
 service:
@@ -29,7 +29,7 @@ env:
   - name: PINECONE_APIKEY
     valueFrom:
       secretKeyRef:
-        name: ingesting-secrets
+        name: image-retrieval-secrets
         key: PINECONE_APIKEY
   - name: GOOGLE_APPLICATION_CREDENTIALS
     value: /secrets/gcp-key.json

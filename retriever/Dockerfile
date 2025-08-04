@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY retriever/requirements.txt .
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc libjpeg-dev zlib1g-dev && \
@@ -13,8 +13,8 @@ RUN apt-get update && \
     pip install --no-cache-dir -r requirements.txt && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY ./retriever /app/retriever
 
 EXPOSE 5002
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5002"]
+CMD ["uvicorn", "retriever.main:app", "--host", "0.0.0.0", "--port", "5002"]

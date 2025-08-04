@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY ingesting/requirements.txt .
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc libjpeg-dev zlib1g-dev && \
@@ -13,8 +13,8 @@ RUN apt-get update && \
     pip install --no-cache-dir -r requirements.txt && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY ./ingesting /app/ingesting
 
 EXPOSE 5001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001"]
+CMD ["uvicorn", "ingesting.main:app", "--host", "0.0.0.0", "--port", "5001"]
