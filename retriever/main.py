@@ -1,3 +1,4 @@
+import atexit
 import datetime
 import time
 from io import BytesIO
@@ -5,11 +6,28 @@ from io import BytesIO
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from loguru import logger
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
 from PIL import Image, UnidentifiedImageError
 
 from retriever.config import Config
 from retriever.utils import (get_feature_vector, get_index, get_storage_client,
                              search)
+
+set_tracer_provider(
+    TracerProvider(resource=Resource.create({SERVICE_NAME: "retriever-service"}))
+)
+tracer = get_tracer_provider().get_tracer("retriever", "0.1.1")
+jaeger_exporter = JaegerExporter(
+    agent_host_name="jaeger-tracing-jaeger-all-in-one.tracing.svc.cluster.local",
+    agent_port=6831,
+)
+span_processor = BatchSpanProcessor(jaeger_exporter)
+get_tracer_provider().add_span_processor(span_processor)
+atexit.register(span_processor.shutdown)
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")
@@ -48,54 +66,63 @@ def health_check():
 
 @app.post("/search_image")
 async def search_image(file: UploadFile = File(...)):
-    try:
-        image_bytes = await file.read()
-        # Validate image
-        try:
-            Image.open(BytesIO(image_bytes)).convert("RGB")
-        except UnidentifiedImageError:
-            raise HTTPException(
-                status_code=400, detail="Uploaded file is not a valid image."
-            )
+    with tracer.start_as_current_span("search_image") as main_span:
 
-        # Get feature vector from embedding service
-        feature = get_feature_vector(image_bytes)
+        with tracer.start_as_current_span(
+            "validate-image", links=[Link(main_span.get_span_context())]
+        ):
+            image_bytes = await file.read()
+            try:
+                Image.open(BytesIO(image_bytes)).convert("RGB")
+            except UnidentifiedImageError:
+                raise HTTPException(
+                    status_code=400, detail="Uploaded file is not a valid image."
+                )
 
-        start_time = time.time()
-        match_ids = search(index, feature, top_k=Config.TOP_K)
-        elapsed_time = time.time() - start_time
-        logger.info(f"Search completed in {elapsed_time:.4f} seconds")
-        if not match_ids:
-            logger.warning("No match IDs found from Pinecone search.")
-            return []
-        response = index.fetch(ids=match_ids)
+        with tracer.start_as_current_span(
+            "get-feature-vector", links=[Link(main_span.get_span_context())]
+        ):
+            feature = get_feature_vector(image_bytes)
+
+        with tracer.start_as_current_span(
+            "pinecone-search", links=[Link(main_span.get_span_context())]
+        ):
+            start_time = time.time()
+            match_ids = search(index, feature, top_k=Config.TOP_K)
+            elapsed = time.time() - start_time
+            logger.info(f"Search completed in {elapsed:.4f} seconds")
+            if not match_ids:
+                return []
+
+        with tracer.start_as_current_span(
+            "fetch-from-pinecone", links=[Link(main_span.get_span_context())]
+        ):
+            response = index.fetch(ids=match_ids)
 
         images_url = []
-        for match_id in match_ids:
-            if len(images_url) == Config.TOP_K:
-                break
-            if match_id in response.get("vectors", {}):
-                metadata = response["vectors"][match_id].get("metadata", {})
-                gcs_path = metadata.get("gcs_path", "")
-                blob = bucket.blob(gcs_path)
-                if not blob.exists():
-                    logger.warning(
-                        f"Image with GCS path {gcs_path} does not exist in bucket."
+        with tracer.start_as_current_span(
+            "generate-signed-urls", links=[Link(main_span.get_span_context())]
+        ):
+            for match_id in match_ids:
+                if len(images_url) == Config.TOP_K:
+                    break
+                if match_id in response.get("vectors", {}):
+                    metadata = response["vectors"][match_id].get("metadata", {})
+                    gcs_path = metadata.get("gcs_path", "")
+                    blob = bucket.blob(gcs_path)
+                    if not blob.exists():
+                        logger.warning(f"GCS blob not found: {gcs_path}")
+                        continue
+                    signed_url = blob.generate_signed_url(
+                        version="v4",
+                        expiration=datetime.timedelta(hours=1),
+                        method="GET",
                     )
-                    continue
-                signed_url = blob.generate_signed_url(
-                    version="v4", expiration=datetime.timedelta(hours=1), method="GET"
-                )
-                images_url.append(signed_url)
-                logger.info(f"Found URL for match ID {match_id}")
-            else:
-                logger.warning(f"Match ID {match_id} not found in response.")
+                    images_url.append(signed_url)
+                else:
+                    logger.warning(f"Missing vector metadata for ID: {match_id}")
+
         return images_url
-    except Exception as e:
-        logger.error(f"Error in image search process: {e}")
-        raise HTTPException(
-            status_code=400, detail=f"Error in image search process: {e}"
-        )
 
 
 if __name__ == "__main__":

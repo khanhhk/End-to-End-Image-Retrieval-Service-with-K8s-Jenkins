@@ -1,6 +1,6 @@
 # End-to-End Image Retrieval Service with K8s & Jenkins
 ## System Architecture
-![](images/Architecture.png)
+![](images/Architecture.svg)
 ## Technology:
 * Source control: [![Git/Github][Github-logo]][Github-url]
 * CI/CD: [![Jenkins][Jenkins-logo]][Jenkins-url]
@@ -340,6 +340,44 @@ sudo nano /etc/hosts
 35.240.244.49 jaeger.hkk.vn
 ```
 Now, you can open your browser and visit: http://jaeger.hkk.vn.
+![](gifs/3-8.gif)
+
+#### 3.2.4 Deploy ELK Stack
+Add Elastic Helm Repository:
+```bash
+helm repo add elastic https://helm.elastic.co
+helm repo update
+```
+
+Deploy ELK Components:
++ Elasticsearch: stores and indexes log data.
+```bash
+helm upgrade --install elasticsearch elastic/elasticsearch -f ./helm_charts/elk/values-elasticsearch.yaml --version 8.5.1 -n logging --create-namespace
+```
++ Logstash: processes and transforms log data before sending it to Elasticsearch.
+```bash
+helm upgrade --install logstash elastic/logstash -f ./helm_charts/elk/values-logstash.yaml --version 8.5.1 -n logging --create-namespace
+```
++ Filebeat: collects logs from applications and sends them to Logstash/Elasticsearch.
+```bash
+helm upgrade --install filebeat elastic/filebeat -f ./helm_charts/elk/values-filebeat.yaml --version 8.5.1 -n logging --create-namespace
+```
++ Kibana: web UI for visualizing and exploring data stored in Elasticsearch.
+```bash
+helm upgrade --install kibana elastic/kibana -f ./helm_charts/elk/values-kibana.yaml --version 8.5.1 -n logging --create-namespace
+```
+
+Expose Kibana UI via Ingress because:
++ Kibana communicates with Elasticsearch internally.
++ This avoids exposing Elasticsearch directly, improving security.
+```bash
+kubectl apply -f ./helm_charts/elk/kibana-ingress.yaml
+```
+Access Kibana at: `http://kibana.35.240.244.49.nip.io` and login with password in `values-elasticsearch.yaml` or get by this command:
+```bash
+kubectl get secrets --namespace=logging elasticsearch-master-credentials -ojsonpath='{.data.password}' | base64 -d
+```
+![](gifs/3-9.gif)
 
 ## 4. Continuous deployment to GKE using Jenkins pipeline
 Jenkins is deployed on a Google Compute Engine (GCE) instance using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html). The instance is configured with the machine type: **e2-standard-2** (2 vCPUs, 8 GB RAM).

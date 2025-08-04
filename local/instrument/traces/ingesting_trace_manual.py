@@ -6,13 +6,10 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 import atexit
 import datetime
-import json
 import uuid
 from io import BytesIO
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from ingesting.config import Config
-from ingesting.utils import get_feature_vector, get_index, get_storage_client
 from loguru import logger
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -20,6 +17,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
 from PIL import Image, UnidentifiedImageError
+
+from ingesting.config import Config
+from ingesting.utils import get_feature_vector, get_index, get_storage_client
 
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: "ingesting-service"}))

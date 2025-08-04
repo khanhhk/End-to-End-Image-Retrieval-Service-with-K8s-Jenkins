@@ -1,15 +1,32 @@
+import atexit
 import datetime
-import json
 import uuid
 from io import BytesIO
 
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from loguru import logger
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
 from PIL import Image, UnidentifiedImageError
 
 from ingesting.config import Config
 from ingesting.utils import get_feature_vector, get_index, get_storage_client
+
+set_tracer_provider(
+    TracerProvider(resource=Resource.create({SERVICE_NAME: "ingesting-service"}))
+)
+tracer = get_tracer_provider().get_tracer("ingesting", "0.1.1")
+jaeger_exporter = JaegerExporter(
+    agent_host_name="jaeger-tracing-jaeger-all-in-one.tracing.svc.cluster.local",
+    agent_port=6831,
+)
+span_processor = BatchSpanProcessor(jaeger_exporter)
+get_tracer_provider().add_span_processor(span_processor)
+atexit.register(span_processor.shutdown)
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")
@@ -48,55 +65,60 @@ def health_check():
 
 @app.post("/push_image")
 async def push_image(file: UploadFile = File(...)):
-    try:
-        image_bytes = await file.read()
-        # Check file extension
-        ext = file.filename.split(".")[-1].lower()
-        if ext not in {"jpg", "jpeg", "png"}:
-            raise HTTPException(
-                status_code=400, detail="Only .jpg/.jpeg/.png files are allowed."
-            )
-        # Validate image
-        try:
-            Image.open(BytesIO(image_bytes)).convert("RGB")
-        except UnidentifiedImageError:
-            raise HTTPException(
-                status_code=400, detail="Uploaded file is not a valid image."
-            )
-        # Get feature vector from embedding service
-        feature = get_feature_vector(image_bytes)
+    with tracer.start_as_current_span("push_image") as push_span:
+
+        with tracer.start_as_current_span(
+            "validate-image", links=[Link(push_span.get_span_context())]
+        ):
+            image_bytes = await file.read()
+            ext = file.filename.split(".")[-1].lower()
+            if ext not in {"jpg", "jpeg", "png"}:
+                raise HTTPException(
+                    status_code=400, detail="Only .jpg/.jpeg/.png allowed"
+                )
+            try:
+                Image.open(BytesIO(image_bytes)).convert("RGB")
+            except UnidentifiedImageError:
+                raise HTTPException(status_code=400, detail="Invalid image file")
+
+        with tracer.start_as_current_span(
+            "get-feature-vector", links=[Link(push_span.get_span_context())]
+        ):
+            feature = get_feature_vector(image_bytes)
 
         file_id = str(uuid.uuid4())
         gcs_path = f"images/{file_id}.{ext}"
 
-        # 1. Upload to GCS
-        blob = bucket.blob(gcs_path)
-        if not blob.exists():
-            try:
-                blob.upload_from_string(image_bytes, content_type=file.content_type)
-                logger.info(f"Uploaded image to GCS successfully: {gcs_path}")
-            except Exception as e:
-                logger.error(f"Failed to upload image to GCS: {e}")
-                raise HTTPException(
-                    status_code=500, detail=f"Failed to upload image to GCS: {e}"
-                )
-        else:
-            logger.warning(f"Image already exists: {gcs_path}")
+        with tracer.start_as_current_span(
+            "upload-to-gcs", links=[Link(push_span.get_span_context())]
+        ):
+            blob = bucket.blob(gcs_path)
+            if not blob.exists():
+                try:
+                    blob.upload_from_string(image_bytes, content_type=file.content_type)
+                    logger.info(f"Uploaded to GCS: {gcs_path}")
+                except Exception as e:
+                    logger.error(f"GCS upload failed: {e}")
+                    raise HTTPException(status_code=500, detail="GCS upload failed")
 
-        # 2. Generate signed URL with download name
-        response_disposition = f"attachment; filename={file.filename}"
-        signed_url = blob.generate_signed_url(
-            version="v4",
-            expiration=datetime.timedelta(hours=1),
-            method="GET",
-            response_disposition=response_disposition,
-        )
+        with tracer.start_as_current_span(
+            "generate-signed-url", links=[Link(push_span.get_span_context())]
+        ):
+            response_disposition = f"attachment; filename={file.filename}"
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=datetime.timedelta(hours=1),
+                method="GET",
+                response_disposition=response_disposition,
+            )
 
-        # 3. Upsert to Pinecone
-        index.upsert(
-            [(file_id, feature, {"gcs_path": gcs_path, "filename": file.filename})]
-        )
-        logger.info(f"Inserted vector into Pinecone: {file_id}")
+        with tracer.start_as_current_span(
+            "upsert-to-pinecone", links=[Link(push_span.get_span_context())]
+        ):
+            index.upsert(
+                [(file_id, feature, {"gcs_path": gcs_path, "filename": file.filename})]
+            )
+            logger.info(f"Upserted vector to Pinecone: {file_id}")
 
         return {
             "message": "Successfully!",
@@ -104,9 +126,6 @@ async def push_image(file: UploadFile = File(...)):
             "gcs_path": gcs_path,
             "signed_url": signed_url,
         }
-    except Exception as e:
-        logger.error(f"Error in pushing image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error in pushing image: {e}")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ from io import BytesIO
 from typing import List
 
 import torch
-from embedding.main import DEVICE, extractor, model
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -17,6 +16,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
 from PIL import Image, UnidentifiedImageError
+
+from embedding.main import DEVICE, extractor, model
 
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: "embedding-service"}))

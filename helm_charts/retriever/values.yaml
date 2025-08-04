@@ -6,7 +6,7 @@ ingress:
       
 image:
   repository: hoangkimkhanh1907/retriever-service
-  tag: 0.0.14
+  tag: 0.0.16
   pullPolicy: IfNotPresent
 
 service:
