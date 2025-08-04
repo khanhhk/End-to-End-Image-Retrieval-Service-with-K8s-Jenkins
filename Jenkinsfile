@@ -8,6 +8,21 @@ pipeline {
     }
 
     stages {
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Tạo virtualenv nếu muốn cô lập môi trường
+                    sh '''
+                        python3 -m venv venv
+                        . venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                        pytest tests/ --maxfail=1 --disable-warnings -q
+                    '''
+                }
+            }
+        }
+        
         stage('Build and Push Images') {
             parallel {
                 stage('Build Embedding') {
@@ -62,11 +77,9 @@ pipeline {
             steps {
                 script {
                     container('helm') {
-                        def services = ['embedding', 'ingesting', 'retriever']
-                        for (svc in services) {
-                            def imageName = "${registry_base}/${svc}-service"
-                            sh "helm upgrade --install ${svc}-service ./helm_charts/${svc} --namespace ${svc} --set deployment.image.name=${imageName} --set deployment.image.version=${imageVersion}"
-                        }
+                        sh "helm upgrade --install embedding-service ./helm_charts/embedding --namespace embedding --set deployment.image.name=${registry_base}/embedding-service --set deployment.image.version=${imageVersion}"
+                        sh "helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace image-retrieval --set deployment.image.name=${registry_base}/ingesting-service --set deployment.image.version=${imageVersion}"
+                        sh "helm upgrade --install retriever-service ./helm_charts/retriever --namespace image-retrieval --set deployment.image.name=${registry_base}/retriever-service --set deployment.image.version=${imageVersion}"
                     }
                 }
             }

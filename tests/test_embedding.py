@@ -13,7 +13,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session")
 def test_image_bytes():
-    with open(Path("test/test_image.jpeg"), "rb") as f:
+    with open(Path("tests/test_image.jpeg"), "rb") as f:
         return f.read()
 
 
@@ -23,7 +23,7 @@ def invalid_bytes():
 
 
 def test_embedding_health():
-    response = client.get("/health_check")
+    response = client.get("/healthz")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 

@@ -73,8 +73,7 @@
   ├── terraform
   │    ├── main.tf
   │    └── variables.tf
-  ├── test                              
-  │    ├── docker-compose.yaml                
+  ├── tests                                           
   │    ├── test_embedding.py         
   │    ├── test_image.jpeg                            
   │    ├── test_ingesting.py                
@@ -180,20 +179,24 @@ I use the [ViT-MSN](https://github.com/facebookresearch/msn) embedding model, wh
 ```bash
 helm upgrade --install embedding-service ./helm_charts/embedding --namespace embedding --create-namespace
 ```
-This command will create the necessary pods in the `embedding` namespace.
+This command creates all necessary resources in the `embedding` namespace.
 ### 2.3. Deploy the Ingesting
+Create the Namespace and Secrets:
+```bash
+kubectl create namespace image-retrieval
+kubectl create secret generic image-retrieval-secrets --from-literal=PINECONE_APIKEY=<your_pinecone_apikey> --namespace image-retrieval
+kubectl create secret generic gcp-key-secret --from-file=gcp-key.json=<path_to_the_file_json> --namespace image-retrieval
+```
+
 Before deploying, update the host value in `./helm_charts/ingesting/values.yaml` to match the external IP of the NGINX service with the `.nip.io` domain. For example:
 ```bash
-ingress:
+ingress: 
   enabled: true
   host: 35.240.244.49.nip.io
 ```
-Then run the following commands:
+Then run the following command:
 ```bash
-kubectl create namespace ingesting
-kubectl create secret generic ingesting-secrets --from-literal=PINECONE_APIKEY=<your_pinecone_apikey> --namespace ingesting
-kubectl create secret generic gcp-key-secret --from-file=gcp-key.json=<path_to_the_file_json> --namespace ingesting
-helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace ingesting
+helm upgrade --install ingesting-service ./helm_charts/ingesting --namespace image-retrieval
 ```
 Once deployed, the ingesting service will be available at: http://35.240.244.49.nip.io/ingesting/docs.
 ![](images/2-2.png)
@@ -207,10 +210,7 @@ ingress:
 ```
 Then run:
 ```bash
-kubectl create namespace retriever
-kubectl create secret generic retriever-secrets --from-literal=PINECONE_APIKEY=<your_pinecone_apikey> --namespace retriever
-kubectl create secret generic gcp-key-secret --from-file=gcp-key.json=<path_to_the_file_json> --namespace retriever
-helm upgrade --install retriever-service ./helm_charts/retriever --namespace retriever
+helm upgrade --install retriever-service ./helm_charts/retriever --namespace image-retrieval
 ```
 Once deployed, the retriever service will be accessible at: http://35.240.244.49.sslip.io/retriever/docs.
 ![](images/2-3.png)
@@ -324,6 +324,22 @@ Access Grafana UI at `[YOUR_NODEIP_ADDRESS]:30000` (with both user and password 
 + If using ephemeral external IPs, be aware that they may change after 24 hours. For stability, consider reserving a static external IP via the GCP Console or gcloud CLI.
 
 ![](gifs/3-7.gif)
+
+#### 3.2.3 Deploy Jaeger
+To deploy the Jaeger all-in-one tracing system to your Kubernetes cluster, run the following Helm command:
+```bash
+helm upgrade --install jaeger-tracing ./helm_charts/jaeger-all-in-one --namespace tracing --create-namespace
+```
+To access the Jaeger UI using a custom domain (jaeger.hkk.vn), map the domain to your Ingress Controller's external IP:
++ Open your `/etc/hosts` file with elevated permissions:
+```bash
+sudo nano /etc/hosts
+```
++ Add the following line (replace `35.240.244.49` with your actual Ingress external IP if different):
+```bash
+35.240.244.49 jaeger.hkk.vn
+```
+Now, you can open your browser and visit: http://jaeger.hkk.vn.
 
 ## 4. Continuous deployment to GKE using Jenkins pipeline
 Jenkins is deployed on a Google Compute Engine (GCE) instance using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html). The instance is configured with the machine type: **e2-standard-2** (2 vCPUs, 8 GB RAM).

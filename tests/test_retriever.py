@@ -6,6 +6,16 @@ import pytest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture(autouse=True)
+def mock_get_feature_vector(monkeypatch):
+    def fake_get_feature_vector(_):
+        return [0.1] * 768
+
+    monkeypatch.setattr("retriever.main.get_feature_vector", fake_get_feature_vector)
+
+
 from retriever.main import app
 
 client = TestClient(app)
@@ -13,7 +23,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session")
 def test_image_bytes():
-    with open(Path("test/test_image.jpeg"), "rb") as f:
+    with open(Path("tests/test_image.jpeg"), "rb") as f:
         return f.read()
 
 
@@ -28,7 +38,7 @@ def invalid_image_bytes():
 
 
 def test_retriever_health():
-    response = client.get(f"/health_check")
+    response = client.get(f"/healthz")
     assert response.status_code == 200
     assert response.json()["status"] == "OK!"
 
