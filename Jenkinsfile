@@ -11,15 +11,12 @@ pipeline {
         stage('Run Tests') {
             agent {
                 docker {
-                    image 'python:3.9'
+                    image 'hoangkimkhanh1907/tests:0.0.1'
                 }
             }
             steps {
                 script {
                     sh '''
-                        python --version
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
                         pytest tests/ --maxfail=1 --disable-warnings -q
                     '''
                 }
