@@ -19,7 +19,6 @@ pipeline {
                 PINECONE_APIKEY = credentials('PINECONE_APIKEY')
                 GOOGLE_APPLICATION_CREDENTIALS = credentials('GCP_KEY_FILE')
             }
-            }
             steps {
                 script {
                     sh '''
