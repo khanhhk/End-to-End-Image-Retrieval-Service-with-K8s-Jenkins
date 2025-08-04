@@ -12,7 +12,13 @@ pipeline {
             agent {
                 docker {
                     image 'hoangkimkhanh1907/tests:0.0.1'
+                    reuseNode true
                 }
+            }
+            environment {
+                PINECONE_APIKEY = credentials('PINECONE_APIKEY')
+                GOOGLE_APPLICATION_CREDENTIALS = credentials('GCP_KEY_FILE')
+            }
             }
             steps {
                 script {
