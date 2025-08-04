@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: hoangkimkhanh1907/embedding-service
-  tag: 0.0.15
+  tag: 0.0.16
   pullPolicy: IfNotPresent
 
 service:

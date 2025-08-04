@@ -33,6 +33,7 @@ pipeline {
                 stage('Build Embedding') {
                     steps {
                         script {
+                            sh "docker pull hoangkimkhanh1907/tests:0.0.1"
                             def imageName = "${registry_base}/embedding-service"
                             def dockerImage = docker.build("${imageName}:${imageVersion}", "-f ./embedding/Dockerfile .")
                             docker.withRegistry('', registryCredential) {

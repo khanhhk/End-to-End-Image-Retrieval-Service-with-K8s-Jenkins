@@ -18,44 +18,30 @@
 ```txt
   ├── ansible                               
   │    ├── playbook
-  |    |    ├── create_compute_instance.yaml
-  |    |    └── install_and_run_docker.yml
   │    └──  inventory                   
   ├── embedding                               
   │    ├── Dockerfile                    
   │    ├── main.py                      
   │    └── requirements.txt
   ├── gifs
-  ├── helm_charts                 
+  ├── helm_charts
+  │    ├── elk        
   │    ├── embedding
-  |    |    ├── templates
-  |    |    |    ├── deployment.yaml
-  |    |    |    └── service.yaml
-  |    |    ├── Chart.yaml
-  |    |    └── values.yaml
+  │    ├── grafana
   │    ├── ingesting
-  |    |    ├── templates
-  |    |    |    ├── deployment.yaml
-  |    |    |    ├── nginx-ingress.yaml
-  |    |    |    └── service.yaml
-  |    |    ├── Chart.yaml
-  |    |    └── values.yaml
+  │    ├── jaeger-all-in-one
   │    ├── nginx-ingress
+  │    ├── prometheus
+  │    ├── prometheus-operator-crds
   │    └── retriever
-  |    |    ├── templates
-  |    |    |    ├── deployment.yaml
-  |    |    |    ├── nginx-ingress.yaml
-  |    |    |    └── service.yaml
-  |    |    ├── Chart.yaml
-  |    |    └── values.yaml
   ├── images                            
   ├── ingesting                              
   │    ├── .env                       
   │    ├── config.py                
   │    ├── Dockerfile                             
   │    ├── main.py
-  │    ├── utils.py                   
-  │    └── requirements.txt
+  │    ├── requirements.txt                  
+  │    └── utils.py
   ├── local                              
   │    ├── alertmanager                     
   │    ├── elk          
@@ -68,8 +54,8 @@
   │    ├── config.py                
   │    ├── Dockerfile                  
   │    ├── main.py
-  │    ├── utils.py                   
-  │    └── requirements.txt                       
+  │    ├── requirements.txt                   
+  │    └── utils.py              
   ├── terraform
   │    ├── main.tf
   │    └── variables.tf
