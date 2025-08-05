@@ -1,15 +1,17 @@
 import atexit
+import datetime
 import uuid
 from io import BytesIO
 from time import time
+
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from loguru import logger
 from opentelemetry import metrics
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -125,41 +127,44 @@ async def push_image(file: UploadFile = File(...)):
         file_id = str(uuid.uuid4())
         gcs_path = f"images/{file_id}.{ext}"
 
-        with tracer.start_as_current_span("upload-to-gcs", links=[Link(push_span.get_span_context())]):
+        with tracer.start_as_current_span(
+            "upload-to-gcs", links=[Link(push_span.get_span_context())]
+        ):
             blob = bucket.blob(gcs_path)
-            try:
-                blob.upload_from_string(image_bytes, content_type=file.content_type)
-                logger.info(f"Uploaded to GCS: {gcs_path}")
-            except Exception as e:
-                logger.error(f"GCS upload failed: {e}")
-                raise HTTPException(status_code=500, detail="GCS upload failed")
+            if not blob.exists():
+                try:
+                    blob.upload_from_string(image_bytes, content_type=file.content_type)
+                    logger.info(f"Uploaded to GCS: {gcs_path}")
+                except Exception as e:
+                    logger.error(f"GCS upload failed: {e}")
+                    raise HTTPException(status_code=500, detail="GCS upload failed")
 
-        image_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{gcs_path}"
+        with tracer.start_as_current_span(
+            "generate-signed-url", links=[Link(push_span.get_span_context())]
+        ):
+            response_disposition = f"attachment; filename={file.filename}"
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=datetime.timedelta(hours=1),
+                method="GET",
+                response_disposition=response_disposition,
+            )
 
         with tracer.start_as_current_span(
             "upsert-to-pinecone", links=[Link(push_span.get_span_context())]
         ):
-            index.upsert([
-                (
-                    file_id,
-                    feature,
-                    {
-                        "gcs_path": gcs_path,
-                        "filename": file.filename,
-                        "image_url": image_url
-                    },
-                )
-            ])
+            index.upsert(
+                [(file_id, feature, {"gcs_path": gcs_path, "filename": file.filename})]
+            )
             logger.info(f"Upserted vector to Pinecone: {file_id}")
             elapsed = time() - start_time
             ingesting_histogram.record(elapsed, {"api": "/push_image"})
             response_time_summary.observe(elapsed)
-        
         return {
             "message": "Successfully!",
             "file_id": file_id,
             "gcs_path": gcs_path,
-            "image_url": image_url,
+            "signed_url": signed_url,
         }
 
 

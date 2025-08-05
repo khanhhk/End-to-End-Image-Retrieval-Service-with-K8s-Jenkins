@@ -6,7 +6,7 @@ ingress:
 
 image:
   repository: hoangkimkhanh1907/ingesting-service
-  tag: 0.0.19
+  tag: 0.0.22
   pullPolicy: IfNotPresent
 
 service:

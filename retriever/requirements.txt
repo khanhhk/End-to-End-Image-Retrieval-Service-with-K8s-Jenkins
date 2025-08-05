@@ -3,6 +3,7 @@ loguru==0.7.0
 uvicorn==0.29.0
 pinecone==5.4.0
 python-multipart==0.0.9
+google-cloud-storage==2.18.2
 pillow==10.4.0
 requests==2.32.3
 opentelemetry-api==1.19.0
