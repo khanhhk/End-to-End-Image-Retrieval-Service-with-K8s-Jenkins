@@ -79,9 +79,9 @@
 
     2. [Deploy the Embedding Model](#22-deploy-the-embedding-model)
 
-    3. [Deploy the Ingesting](#22-deploy-the-ingesting)
+    3. [Deploy the Ingesting](#23-deploy-the-ingesting)
 
-    4. [Deploy the Retriever](#22-deploy-the-retriever)
+    4. [Deploy the Retriever](#24-deploy-the-retriever)
 
 3. [Deploy monitoring services](#3-deploy-monitoring-services)
 
