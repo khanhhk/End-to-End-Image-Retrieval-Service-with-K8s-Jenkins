@@ -1,0 +1,12 @@
+apiVersion: v2
+name: grafana
+description: A Helm chart for grafana service
+
+type: application
+
+version: 0.1.0
+appVersion: "1.0.0"
+
+maintainers:
+- email: hoangkimkhanh1907@gmail.com
+  name: hoangkimkhanh
