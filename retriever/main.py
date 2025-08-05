@@ -6,6 +6,11 @@ from io import BytesIO
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from loguru import logger
+from opentelemetry import metrics
+from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.metrics import set_meter_provider
+from opentelemetry.sdk.metrics import MeterProvider
+from prometheus_client import Gauge, Summary, start_http_server
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -47,6 +52,39 @@ except Exception as e:
     logger.error(f"Error accessing GCS bucket '{GCS_BUCKET_NAME}': {e}")
     raise HTTPException(status_code=500, detail=str(e))
 
+# Start Prometheus client
+start_http_server(port=8097, addr="0.0.0.0")
+
+# Service name is required for most backends
+resource = Resource(attributes={SERVICE_NAME: "ingesting-service"})
+
+# Exporter to export metrics to Prometheus
+reader = PrometheusMetricReader()
+
+# Meter is responsible for creating and recording metrics
+provider = MeterProvider(resource=resource, metric_readers=[reader])
+set_meter_provider(provider)
+meter = metrics.get_meter("ingesting", "0.1.1")
+
+search_counter = meter.create_counter(
+    name="retriever_search_image_counter", description="Number of search_image requests"
+)
+
+search_histogram = meter.create_histogram(
+    name="retriever_search_image_response_time_seconds",
+    description="Response time for search_image requests",
+    unit="s",
+)
+
+retriever_vector_size_gauge = Gauge(
+    "retriever_vector_size",
+    "Length of embedding vector returned from embedding service",
+)
+
+retriever_response_time_summary = Summary(
+    "retriever_response_time_summary_seconds", "Summary of search_image response time"
+)
+
 app = FastAPI(
     title="Retriever Service",
     docs_url="/retriever/docs",
@@ -87,10 +125,15 @@ async def search_image(file: UploadFile = File(...)):
         with tracer.start_as_current_span(
             "pinecone-search", links=[Link(main_span.get_span_context())]
         ):
-            start_time = time.time()
+            search_start = time()
             match_ids = search(index, feature, top_k=Config.TOP_K)
-            elapsed = time.time() - start_time
-            logger.info(f"Search completed in {elapsed:.4f} seconds")
+            search_elapsed = time() - search_start
+            logger.info(f"Search completed in {search_elapsed:.4f} seconds")
+            labels = {"api": "/search_image"}
+            search_counter.add(1, labels)
+            search_histogram.record(search_elapsed, labels)
+            retriever_response_time_summary.observe(search_elapsed)
+            retriever_vector_size_gauge.set(len(feature))
             if not match_ids:
                 return []
 

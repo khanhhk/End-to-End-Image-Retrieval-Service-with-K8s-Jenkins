@@ -14,7 +14,7 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session")
 def test_image_bytes():
-    with open(Path("tests/test_image.jpeg"), "rb") as f:
+    with open(Path("tests/data/test_image.jpeg"), "rb") as f:
         return f.read()
 
 

@@ -85,9 +85,13 @@
 
 3. [Deploy monitoring services](#3-deploy-monitoring-services)
 
-    1. [Local](#31-local)
+    1. [Deploy Prometheus](#31-deploy-prometheus)
 
-    2. [Deploy on GKE](#32-deploy-on-gke)
+    2. [Deploy Grafana](#32-deploy-grafana)
+
+    3. [Deploy Jaeger](#33-deploy-jaeger)
+
+    4. [Deploy ELK Stack](#34-deploy-elk-stack)
 
 
 4. [Continuous deployment to GKE using Jenkins pipeline](#4-continuous-deployment-to-gke-using-jenkins-pipeline)
@@ -203,73 +207,11 @@ Once deployed, the retriever service will be accessible at: http://35.240.244.49
 ![](images/2-3.png)
 
 ## 3. Deploy monitoring services
-### 3.1 Local
-This section demonstrates how to monitor your services locally using ELK Stack, Jaeger, Prometheus, Grafana, and Alertmanager.
-#### 3.1.1 Elastic Search
-Start the ELK stack with Filebeat using the following command:
-```bash
-cd local/elk
-docker compose -f elk-docker-compose.yml -f extensions/filebeat/filebeat-compose.yml up -d
-```
-You can access Kibana at [http://localhost:5601](http://localhost:5601) to explore logs collected by Filebeat from container output and shipped to Elasticsearch. Credentials for Kibana are defined in `local/elk/.env`.
-
-![](gifs/3-1.gif)
-
-#### 3.1.2 Jaeger
-Jaeger helps trace the execution time of specific code blocks across your microservices.
-
-To start Jaeger with Prometheus and Grafana:
-```bash
-cd local
-docker compose -f prom-graf-docker-compose.yaml up -d
-```
-Access Jaeger at [http://localhost:16686](http://localhost:16686).
-+ Automatic tracing
-```bash
-cd instrument/traces
-opentelemetry-instrument uvicorn embedding_trace_automatic:app
-```
-![](gifs/3-2.gif)
-
-In the Jaeger UI, traces for instrumented code blocks will be displayed on the right-hand side, allowing you to analyze execution durations and dependencies.
-
-+ Manual tracing
-```bash
-cd instrument/traces
-uvicorn embedding_trace_manual:app
-```
-![](gifs/3-3.gif)
-
-#### 3.1.3 Prometheus
-Prometheus is available at [http://localhost:9090](http://localhost:9090). You can query any available metric via the UI. Click the highlighted dropdown to list all metrics currently being scraped by Prometheus.
-![](gifs/3-4.gif)
-#### 3.1.4 Grafana
-Grafana can be accessed at [http://localhost:3001](http://localhost:3001) with default credentials: `username: admin, password: admin`. You can either create your own dashboards or import community dashboards from Grafana Labs.
-
-![](gifs/3-5.gif)
-
-For example, the following dashboard (imported from Grafana Labs) visualizes container-level metrics such as CPU usage, memory usage, and memory cache using cAdvisor and Prometheus.
-
-Additionally, you can build custom dashboards to monitor both node-level and application-specific resource usage.
-
-![](images/3-1.png)
-
-#### 3.1.5 Alertmanager
-While monitoring services and infrastructure, you can define custom alerting rules to notify when resource usage exceeds predefined thresholds. These rules and notification settings are configured in `alertmanager/config.yml`.
-
-![](gifs/3-6.gif)
-
-In this project, Alertmanager is configured to send alerts to Discord in the following scenarios:
-+ When the available memory on a node drops below 5%.
-+ When the embedding vector size differs from 768.
-+ When the embedding service consumes more than 1.5 GB of RAM.
-
-### 3.2 Deploy on GKE
 I'm using Prometheus and Grafana for monitoring the health of both Node and pods that running application.
 
 Prometheus will scrape metrics from both Node and pods in GKE cluster. Subsequently, Grafana will display information such as CPU and RAM usage for system health monitoring, and system health alerts will be sent to Discord.
 
-#### 3.2.1 Deploy Prometheus
+### 3.1 Deploy Prometheus
 Prometheus is responsible for scraping metrics from Kubernetes nodes and pods using exporters such as `node-exporter` and `kube-state-metrics`.
 
 + Install Prometheus CRDs:
@@ -294,7 +236,7 @@ Access Prometheus UI:
   kubectl get nodes -o wide
   ```
 
-#### 3.2.2 Deploy Grafana
+### 3.2 Deploy Grafana
 Grafana will be used to visualize metrics collected by Prometheus and provide dashboards for system and application health.
 
 Deploy Grafana service (exposed via NodePort):
@@ -310,9 +252,9 @@ Access Grafana UI at `[YOUR_NODEIP_ADDRESS]:30000` (with both user and password 
 + Make sure that the GCP firewall allows inbound TCP traffic on ports `30001` and `30000` to the relevant GKE node targets.
 + If using ephemeral external IPs, be aware that they may change after 24 hours. For stability, consider reserving a static external IP via the GCP Console or gcloud CLI.
 
-![](gifs/3-7.gif)
+![](gifs/3-1.gif)
 
-#### 3.2.3 Deploy Jaeger
+### 3.3 Deploy Jaeger
 To deploy the Jaeger all-in-one tracing system to your Kubernetes cluster, run the following Helm command:
 ```bash
 helm upgrade --install jaeger-tracing ./helm_charts/jaeger-all-in-one --namespace tracing --create-namespace
@@ -327,9 +269,9 @@ sudo nano /etc/hosts
 35.240.244.49 jaeger.hkk.vn
 ```
 Now, you can open your browser and visit: http://jaeger.hkk.vn.
-![](gifs/3-8.gif)
+![](gifs/3-2.gif)
 
-#### 3.2.4 Deploy ELK Stack
+### 3.4 Deploy ELK Stack
 Add Elastic Helm Repository:
 ```bash
 helm repo add elastic https://helm.elastic.co
@@ -364,7 +306,7 @@ Access Kibana at: `http://kibana.35.240.244.49.nip.io` and login with password i
 ```bash
 kubectl get secrets --namespace=logging elasticsearch-master-credentials -ojsonpath='{.data.password}' | base64 -d
 ```
-![](gifs/3-9.gif)
+![](gifs/3-3.gif)
 
 ## 4. Continuous deployment to GKE using Jenkins pipeline
 Jenkins is deployed on a Google Compute Engine (GCE) instance using [Ansible](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_intro.html). The instance is configured with the machine type: **e2-standard-2** (2 vCPUs, 8 GB RAM).
