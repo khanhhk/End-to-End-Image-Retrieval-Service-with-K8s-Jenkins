@@ -9,8 +9,6 @@ class Config:
     PINECONE_REGION = "us-central1"
     # Config for retriever
     TOP_K = 5
-    # Config for GCS
-    GCS_BUCKET_NAME = "image-retrieval-bucket-1907"
     # Config for embedding service
     EMBEDDING_SERVICE_URL = os.getenv(
         "EMBEDDING_SERVICE_URL", "http://localhost:5000/embed"

@@ -1,5 +1,4 @@
 import atexit
-import datetime
 import uuid
 from io import BytesIO
 from time import time
@@ -126,44 +125,41 @@ async def push_image(file: UploadFile = File(...)):
         file_id = str(uuid.uuid4())
         gcs_path = f"images/{file_id}.{ext}"
 
-        with tracer.start_as_current_span(
-            "upload-to-gcs", links=[Link(push_span.get_span_context())]
-        ):
+        with tracer.start_as_current_span("upload-to-gcs", links=[Link(push_span.get_span_context())]):
             blob = bucket.blob(gcs_path)
-            if not blob.exists():
-                try:
-                    blob.upload_from_string(image_bytes, content_type=file.content_type)
-                    logger.info(f"Uploaded to GCS: {gcs_path}")
-                except Exception as e:
-                    logger.error(f"GCS upload failed: {e}")
-                    raise HTTPException(status_code=500, detail="GCS upload failed")
+            try:
+                blob.upload_from_string(image_bytes, content_type=file.content_type)
+                logger.info(f"Uploaded to GCS: {gcs_path}")
+            except Exception as e:
+                logger.error(f"GCS upload failed: {e}")
+                raise HTTPException(status_code=500, detail="GCS upload failed")
 
-        with tracer.start_as_current_span(
-            "generate-signed-url", links=[Link(push_span.get_span_context())]
-        ):
-            response_disposition = f"attachment; filename={file.filename}"
-            signed_url = blob.generate_signed_url(
-                version="v4",
-                expiration=datetime.timedelta(hours=1),
-                method="GET",
-                response_disposition=response_disposition,
-            )
+        image_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{gcs_path}"
 
         with tracer.start_as_current_span(
             "upsert-to-pinecone", links=[Link(push_span.get_span_context())]
         ):
-            index.upsert(
-                [(file_id, feature, {"gcs_path": gcs_path, "filename": file.filename})]
-            )
+            index.upsert([
+                (
+                    file_id,
+                    feature,
+                    {
+                        "gcs_path": gcs_path,
+                        "filename": file.filename,
+                        "image_url": image_url
+                    },
+                )
+            ])
             logger.info(f"Upserted vector to Pinecone: {file_id}")
             elapsed = time() - start_time
             ingesting_histogram.record(elapsed, {"api": "/push_image"})
             response_time_summary.observe(elapsed)
+        
         return {
             "message": "Successfully!",
             "file_id": file_id,
             "gcs_path": gcs_path,
-            "signed_url": signed_url,
+            "image_url": image_url,
         }
 
 

@@ -1,6 +1,5 @@
 import atexit
-import datetime
-import time
+from time import time
 from io import BytesIO
 
 import uvicorn
@@ -19,8 +18,7 @@ from opentelemetry.trace import Link, get_tracer_provider, set_tracer_provider
 from PIL import Image, UnidentifiedImageError
 
 from retriever.config import Config
-from retriever.utils import (get_feature_vector, get_index, get_storage_client,
-                             search)
+from retriever.utils import (get_feature_vector, get_index, search)
 
 set_tracer_provider(
     TracerProvider(resource=Resource.create({SERVICE_NAME: "retriever-service"}))
@@ -36,21 +34,6 @@ atexit.register(span_processor.shutdown)
 
 index = get_index(Config.INDEX_NAME)
 logger.info(f"Pinecone index: {Config.INDEX_NAME}")
-
-GCS_BUCKET_NAME = Config.GCS_BUCKET_NAME
-try:
-    storage_client = get_storage_client()
-    bucket = storage_client.get_bucket(GCS_BUCKET_NAME)
-    if not bucket.exists():
-        logger.error(f"Bucket {GCS_BUCKET_NAME} not found in Google Cloud Storage.")
-        raise HTTPException(
-            status_code=404, detail=f"Bucket {GCS_BUCKET_NAME} not found."
-        )
-
-    logger.info(f"Connected to GCS bucket '{GCS_BUCKET_NAME}' successfully")
-except Exception as e:
-    logger.error(f"Error accessing GCS bucket '{GCS_BUCKET_NAME}': {e}")
-    raise HTTPException(status_code=500, detail=str(e))
 
 # Start Prometheus client
 start_http_server(port=8097, addr="0.0.0.0")
@@ -149,21 +132,13 @@ async def search_image(file: UploadFile = File(...)):
             for match_id in match_ids:
                 if len(images_url) == Config.TOP_K:
                     break
-                if match_id in response.get("vectors", {}):
-                    metadata = response["vectors"][match_id].get("metadata", {})
-                    gcs_path = metadata.get("gcs_path", "")
-                    blob = bucket.blob(gcs_path)
-                    if not blob.exists():
-                        logger.warning(f"GCS blob not found: {gcs_path}")
-                        continue
-                    signed_url = blob.generate_signed_url(
-                        version="v4",
-                        expiration=datetime.timedelta(hours=1),
-                        method="GET",
-                    )
-                    images_url.append(signed_url)
+                vector_data = response.get("vectors", {}).get(match_id, {})
+                metadata = vector_data.get("metadata", {})
+                image_url = metadata.get("image_url")
+                if image_url:
+                    images_url.append(image_url)
                 else:
-                    logger.warning(f"Missing vector metadata for ID: {match_id}")
+                    logger.warning(f"Missing image_url for ID: {match_id}")
 
         return images_url
 
