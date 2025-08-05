@@ -18,7 +18,9 @@
 ```txt
   ├── ansible                               
   │    ├── playbook
-  │    └──  inventory                   
+  │    └──  inventory    
+  ├── custom_jenkins                              
+  │    └──  Dockerfile              
   ├── embedding                               
   │    ├── Dockerfile                    
   │    ├── main.py                      
@@ -64,7 +66,6 @@
   │    ├── test_image.jpeg                            
   │    ├── test_ingesting.py                
   │    └── test_retriever.py
-  ├── Dockerfile-jenkins
   ├── Jenkinsfile
   └── requirements.txt       
 ```
