@@ -1,4 +1,4 @@
-# End-to-End Image Retrieval Service with K8s & Jenkins
+# Image-Retrieval-ML-System-on-K8S
 ## System Architecture
 ![](images/Architecture.svg)
 ## Technology:
