@@ -1,0 +1,16 @@
+FROM python:3.9-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY ./metrics/requirements_retriever.txt /app
+
+RUN pip install --no-cache-dir -r requirements_retriever.txt 
+
+COPY ./metrics/retriever_metric.py /app
+
+EXPOSE 8001
+
+CMD ["uvicorn", "retriever_metric:app", "--host", "0.0.0.0", "--port", "7998"]
