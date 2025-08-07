@@ -43,14 +43,7 @@
   │    ├── Dockerfile                             
   │    ├── main.py
   │    ├── requirements.txt                  
-  │    └── utils.py
-  ├── local                              
-  │    ├── alertmanager                     
-  │    ├── elk          
-  │    ├── grafana                            
-  │    ├── instrument
-  │    ├── prometheus                  
-  │    └── prom-graf-docker-compose.yaml                      
+  │    └── utils.py                    
   ├── retriever                             
   │    ├── .env                       
   │    ├── config.py                
